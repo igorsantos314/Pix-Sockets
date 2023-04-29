@@ -25,24 +25,31 @@ class AccountRepositoryMock:
 
         return None
     
-    def cred(self, uid, pix_key, value) -> int:
-        account = self.findAccount(pix_key)
+    def isPixPossible(self, transmitter_key, receptor_key, transfer_value):
+        
+        transmitter_account = self.findAccount(transmitter_key)
+        receptor_account = self.findAccount(receptor_key)
+        
+        if transmitter_account == None or receptor_account == None:
+            return None, None
+        
+        if transmitter_account.cash < transfer_value or transfer_value <= 0:
+            return None, None
+        
+        return transmitter_account, receptor_account
 
-        if account != None:
-            if value > 0:
-                account.cred(uid, value)
-                return Protocol.SUCESS
+    def sendPix(self, transmitter_key, receptor_key, transfer_value):
+        transmitter_account, receptor_account = self.isPixPossible(transmitter_key, receptor_key, transfer_value)
+
+        if type(transmitter_account) == Account:
+            transmitter_account.debt(receptor_key, transfer_value)
+            receptor_account.cred(transmitter_key, transfer_value)
+            print("SUCESS")
+            return Protocol.SUCESS
+        
+        print("FAILURE")
         return Protocol.FAILURE
     
-    def debt(self, uid, pix_key, value) -> int:
-        account = self.findAccount(pix_key)
-
-        if account != None:
-            if account.cash >= value and value > 0:
-                account.debt(uid, value)
-                return Protocol.SUCESS
-        return Protocol.FAILURE
-
 class Manager(Protocol):
 
     def __init__(self) -> None:
@@ -94,13 +101,13 @@ class Manager(Protocol):
     def sendMessage(self, conn, msg):
         conn.sendall(str(msg).encode())
         
-    def manageQueue(self, type_process_request, process_id, pix_key, msg, conn):
-        logging.info(f"TYPE={type_process_request} PROCESS_ID={process_id} PIX_KEY={pix_key} MSG={msg}")
+    def manageQueue(self, type_process_request, transfer_key, pix_key, msg, conn):
+        logging.info(f"TYPE={type_process_request} PROCESS_ID={transfer_key} PIX_KEY={pix_key} MSG={msg}")
 
         if type_process_request == Protocol.REQUEST:
             self.queue.append(
                 {
-                    "process_id": process_id,
+                    "process_id": transfer_key,
                     "pix_key": pix_key,
                     "conn": conn,
                     "ts": datetime.now(),
@@ -119,11 +126,12 @@ class Manager(Protocol):
                 self.grantProcessAccess()
 
         elif type_process_request == Protocol.OPERATION_SEND_PIX:
-            result = self.igor_bank.cred(process_id, pix_key, int(msg))
-            
+            result = self.igor_bank.sendPix(transfer_key, pix_key, int(msg))
+            print(result)
+
             self.sendMessage(
                 self.queue[self.indicator]["conn"],
-                f"{Protocol.OPERATION_RESULT}{Protocol.SEPARATOR}{process_id}{Protocol.SEPARATOR}{result}"
+                f"{Protocol.OPERATION_RESULT}{Protocol.SEPARATOR}{transfer_key}{Protocol.SEPARATOR}{result}"
             )
             
     def verifyProcessRunning(self) -> bool:

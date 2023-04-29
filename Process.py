@@ -2,6 +2,7 @@ from BaseProtocol import *
 from datetime import datetime
 from time import sleep
 from random import randint
+from Gui import GuiIgorBank
 
 class Process(Protocol):
 
@@ -14,7 +15,8 @@ class Process(Protocol):
         self.uid = uid
         self.receptors_pix = receptors_pix
         self.value = value
-
+        self.bank_gui = GuiIgorBank()
+        
         self.mSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.mSocket.connect((self.host, self.port))
 
@@ -29,19 +31,20 @@ class Process(Protocol):
             print(data)
 
             if data_list[0] == Protocol.GRANT:
+                self.updateUI("SERVER_REQUEST_GRANTED")
                 self.operation(
                     self.receptors_pix[self.current_number_operation],
                     self.value
                 )
 
             elif data_list[0] == Protocol.OPERATION_RESULT:
+                self.updateUI(f"{Protocol.OPERATION_RESULT}_{data_list[2]}")
+
                 if data_list[2] == Protocol.SUCESS:
                     self.current_number_operation += 1
                     self.requestOperation()
 
     def operation(self, pix_key, value):
-        print("Operation granted")
-
         self.send(
             Protocol.OPERATION_SEND_PIX,
             self.getValueFormated(value),
@@ -54,9 +57,14 @@ class Process(Protocol):
     
     def requestOperation(self):
         if self.current_number_operation < len(self.receptors_pix):
+            self.updateUI(Protocol.REQUEST)
             self.send(
                 Protocol.REQUEST
             )
+
+    def updateUI(self, protocol_type):
+        protocol_type = protocol_type.replace("00000000", "SUCESS").replace("00000001", "FAILURE")
+        self.bank_gui.updateGui(datetime.now(), self.uid, self.receptors_pix[self.current_number_operation], self.value, protocol_type)
 
     def getTimeStampFormatted(self) -> str:
         time_stamp = datetime.now().strftime("%H:%M:%S")
@@ -71,5 +79,5 @@ class Process(Protocol):
         value_f = f"{(Protocol.MSG_SIZE - len_value) * '0'}{value}"
 
         return value_f
-    
+
 Process("gabras_8s4d", 2, ["igor_abc", "veto_2asd"], 3)

@@ -18,10 +18,10 @@ class Account:
 
         self.table.padding_width = 1
 
-    def debt(self, uid, value):
+    def debt(self, origin_key, value):
         operation_info = [
-            Protocol.OPERATION_DEBT,
-            uid,
+            Protocol.DEBT_VALUE_SEND_PIX,
+            origin_key,
             value,
             datetime.now()
         ]
@@ -30,10 +30,10 @@ class Account:
         self.operations.append(operation_info)
         self.table.add_row(operation_info)
 
-    def cred(self, uid, value):
+    def cred(self, origin_key, value):
         operation_info = [
-            Protocol.OPERATION_SEND_PIX,
-            uid,
+            Protocol.CREDIT_VALUE_RECEIVE_BY_PIX,
+            origin_key,
             value,
             datetime.now()
         ]

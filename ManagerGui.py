@@ -66,20 +66,3 @@ class ManagerGui:
 
     def notifyChanged(self):
         self.table.clear_rows()
-
-debug = False
-
-if __name__ == "__main__":
-    if debug:
-        mg = ManagerGui()
-        sleep(2)
-        mg.notifyChanged(
-            [
-                {
-                    "process_id": "process_id",
-                    "conn": "conn",
-                    "status": "on_hold"
-                }
-            ]
-        )
-    
