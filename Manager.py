@@ -4,18 +4,24 @@ from time import sleep
 from ManagerGui import ManagerGui
 from datetime import datetime
 from Account import Account
+from Operation import Operation
+from Outcome import Outcome
+from Transfer import Transfer
+from User import User
+
+import pickle
 
 class AccountRepositoryMock:
     
     def __init__(self) -> None:
         self.accounts = [
-            Account("igor_abc", 10),
-            Account("juares_egf", 5),
-            Account("veto_2asd", 78),
-            Account("gabras_8s4d", 213),
-            Account("matas_abc", 9),
-            Account("kaique_abc", 15),
-            Account("hitalo_valvo_asdasjh", 25),
+            Account("a", "b", "igor_abc", 10),
+            Account("a", "b", "juares_egf", 5),
+            Account("a", "b", "veto_2asd", 78),
+            Account("a", "b", "gabras_8s4d", 213),
+            Account("a", "b", "matas_abc", 9),
+            Account("a", "b", "kaique_abc", 15),
+            Account("a", "b", "hitalo_valvo_asdasjh", 25),
         ]
 
     def findAccount(self, pix_key):
@@ -25,9 +31,8 @@ class AccountRepositoryMock:
 
         return None
     
-    def isPixPossible(self, transmitter_key, receptor_key, transfer_value):
-        
-        transmitter_account = self.findAccount(transmitter_key)
+    def isPixPossible(self, user: User, receptor_key, transfer_value):
+        transmitter_account = self.findAccount(user.pix_key)
         receptor_account = self.findAccount(receptor_key)
         
         if transmitter_account == None or receptor_account == None:
@@ -38,12 +43,16 @@ class AccountRepositoryMock:
         
         return transmitter_account, receptor_account
 
-    def sendPix(self, transmitter_key, receptor_key, transfer_value):
-        transmitter_account, receptor_account = self.isPixPossible(transmitter_key, receptor_key, transfer_value)
+    def sendPix(self, transfer: Transfer):
+        transmitter_account, receptor_account = self.isPixPossible(
+            transfer.user_credentials, 
+            transfer.receptor, 
+            transfer.value
+        )
 
         if type(transmitter_account) == Account:
-            transmitter_account.debt(receptor_key, transfer_value)
-            receptor_account.cred(transmitter_key, transfer_value)
+            transmitter_account.debt(transfer.receptor, transfer.value)
+            receptor_account.cred(transfer.user_credentials.pix_key, transfer.value)
             print("SUCESS")
             return Protocol.SUCESS
         
@@ -60,6 +69,10 @@ class Manager(Protocol):
                     datefmt='%H:%M:%S',
                     level=logging.DEBUG)
 
+        self.time_out_started = False
+        self.running = True
+        self.last_time_stamp = 0
+
         self.isNotify = False
         self.igor_bank = AccountRepositoryMock()
         self.gui = ManagerGui(self)
@@ -71,6 +84,25 @@ class Manager(Protocol):
         Thread(target=self.gui.build, args=()).start()
 
         self.listenConnections()
+
+    def updateTimeStamp(self):
+        self.running = True
+        self.last_time_stamp = datetime.now().timestamp()
+
+    def verifyTimeOutRequest(self):
+        self.time_out_started = True
+
+        while True:
+            pass
+            """if datetime.now().timestamp() > (self.last_time_stamp + 5) and self.running:
+                self.running = False
+                self.queue[self.indicator].status = Protocol.RELEASED
+                self.indicator += 1
+                
+                if self.indicator < len(self.queue):
+                    self.grantProcessAccess()
+                
+                print("Request timeout ... ")"""
 
     def restart(self):
         self.queue.clear()
@@ -91,64 +123,52 @@ class Manager(Protocol):
 
         while True:
             try:
-                data = conn.recv(self.data_size).decode()
-                data_list = data.split(Protocol.SEPARATOR)
-            
-                self.manageQueue(data_list[0], data_list[1], data_list[2], data_list[3], conn)
+                data = conn.recv(self.data_size)
+                data_operation = pickle.loads(data)
+                data_operation.conn = conn
+
+                print(data_operation)
+
+                self.manageQueue(data_operation)
             except:
                 pass
-
-    def sendMessage(self, conn, msg):
-        conn.sendall(str(msg).encode())
         
-    def manageQueue(self, type_process_request, transfer_key, pix_key, msg, conn):
-        logging.info(f"TYPE={type_process_request} PROCESS_ID={transfer_key} PIX_KEY={pix_key} MSG={msg}")
+    def manageQueue(self, operation: Operation):
+        if operation.operation == Protocol.REQUEST:
+            if self.time_out_started == False:
+                self.updateTimeStamp()
+                Thread(target=self.verifyTimeOutRequest, args=()).start()
 
-        if type_process_request == Protocol.REQUEST:
-            self.queue.append(
-                {
-                    "process_id": transfer_key,
-                    "pix_key": pix_key,
-                    "conn": conn,
-                    "ts": datetime.now(),
-                    "status": "on_hold"
-                }
-            )
+            self.queue.append(operation)
+
             if self.verifyProcessRunning() == False:
                 self.grantProcessAccess()
 
-        elif type_process_request == Protocol.RELEASE:
-            #conn.close()
-            self.queue[self.indicator]["status"] = "released"
+        elif operation.operation == Protocol.RELEASE:
+            self.updateTimeStamp()
+            self.queue[self.indicator].status = Protocol.RELEASED
             self.indicator += 1
             
             if self.indicator < len(self.queue):
                 self.grantProcessAccess()
 
-        elif type_process_request == Protocol.OPERATION_SEND_PIX:
-            result = self.igor_bank.sendPix(transfer_key, pix_key, int(msg))
-            print(result)
+        elif operation.operation == Protocol.OPERATION_SEND_PIX:
+            self.updateTimeStamp()
+            result = self.igor_bank.sendPix(operation.transfer)
 
-            self.sendMessage(
-                self.queue[self.indicator]["conn"],
-                f"{Protocol.OPERATION_RESULT}{Protocol.SEPARATOR}{transfer_key}{Protocol.SEPARATOR}{result}"
-            )
+            self.queue[self.indicator].conn.sendall(pickle.dumps(
+                Outcome(result)
+            ))
             
     def verifyProcessRunning(self) -> bool:
-        process = self.queue[-1]
-        return process["status"] == "running"
+        return self.queue[-1].status == Protocol.RUNNING
 
     def grantProcessAccess(self):
-        current_process = self.queue[self.indicator]
-        process_id = current_process['process_id']
-        self.queue[self.indicator]["status"] = "running"
+        self.queue[self.indicator].status = Protocol.RUNNING
 
-        self.sendMessage(
-            current_process["conn"],
-            f"{Protocol.GRANT}{Protocol.SEPARATOR}process_id={process_id}{Protocol.SEPARATOR}00000000"
-        )
+        self.queue[self.indicator].conn.sendall(pickle.dumps(
+            Outcome(Protocol.GRANT)
+        ))
         
-        #logging.info(f"TYPE={Protocol.GRANT} PROCESS_ID={process_id} MSG=00000000")
-
 if __name__ == "__main__":
     Manager()

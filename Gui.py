@@ -1,4 +1,5 @@
 from prettytable import PrettyTable
+from Transfer import Transfer
 
 class GuiIgorBank:
 
@@ -11,9 +12,17 @@ class GuiIgorBank:
         self.table.align["VALUE"] = "l"
         self.table.align["OPERATION"] = "l"
 
-    def updateGui(self, *args):
+    def updateGui(self, time_stamp, transfer: Transfer, type):
         print("\x1b[2J")
 
-        self.table.add_row(args)
+        self.table.add_row(
+            [
+                time_stamp,
+                transfer.user_credentials.pix_key,
+                transfer.receptor,
+                transfer.value,
+                type
+            ]
+        )
         print(self.table)
         print("\n")

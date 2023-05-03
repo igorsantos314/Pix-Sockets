@@ -4,7 +4,10 @@ from datetime import datetime
 
 class Account:
 
-    def __init__(self, pix_key, initial_cash = 0) -> None:
+    def __init__(self, email, password, pix_key, initial_cash = 0) -> None:
+        self.email = email
+        self.password = password
+        
         self.pix_key = pix_key
         self.cash = initial_cash
         self.operations = []
