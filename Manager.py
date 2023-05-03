@@ -15,13 +15,13 @@ class AccountRepositoryMock:
     
     def __init__(self) -> None:
         self.accounts = [
-            Account("a", "b", "igor_abc", 10),
-            Account("a", "b", "juares_egf", 5),
-            Account("a", "b", "veto_2asd", 78),
-            Account("a", "b", "gabras_8s4d", 213),
-            Account("a", "b", "matas_abc", 9),
-            Account("a", "b", "kaique_abc", 15),
-            Account("a", "b", "hitalo_valvo_asdasjh", 25),
+            Account("a", "b", "igor_abc", 1500),
+            Account("a", "b", "juares_egf", 1500),
+            Account("a", "b", "veto_2asd", 1500),
+            Account("a", "b", "gabras_8s4d", 1500),
+            Account("a", "b", "matas_abc", 1500),
+            Account("a", "b", "kaique_abc", 1500),
+            Account("a", "b", "hitalo_calvo_asdasjh", 1500),
         ]
 
     def findAccount(self, pix_key):
@@ -30,11 +30,28 @@ class AccountRepositoryMock:
                 return i
 
         return None
-    
+
+    def userAuthenticated(self, user: User) -> bool:
+        account = self.findAccount(user.pix_key)
+
+        if account == None:
+            return False
+        
+        elif account.email == user.email and account.password == user.password:
+            return True
+        
+        return False
+
     def isPixPossible(self, user: User, receptor_key, transfer_value):
+        if self.userAuthenticated(user) == False:
+            return None, None
+
         transmitter_account = self.findAccount(user.pix_key)
         receptor_account = self.findAccount(receptor_key)
-        
+
+        if transmitter_account == receptor_account:
+            return None, None
+
         if transmitter_account == None or receptor_account == None:
             return None, None
         
@@ -53,10 +70,9 @@ class AccountRepositoryMock:
         if type(transmitter_account) == Account:
             transmitter_account.debt(transfer.receptor, transfer.value)
             receptor_account.cred(transfer.user_credentials.pix_key, transfer.value)
-            print("SUCESS")
-            return Protocol.SUCESS
+
+            return Protocol.SUCCESS
         
-        print("FAILURE")
         return Protocol.FAILURE
     
 class Manager(Protocol):
@@ -127,8 +143,6 @@ class Manager(Protocol):
                 data_operation = pickle.loads(data)
                 data_operation.conn = conn
 
-                print(data_operation)
-
                 self.manageQueue(data_operation)
             except:
                 pass
@@ -137,7 +151,7 @@ class Manager(Protocol):
         if operation.operation == Protocol.REQUEST:
             if self.time_out_started == False:
                 self.updateTimeStamp()
-                Thread(target=self.verifyTimeOutRequest, args=()).start()
+                #Thread(target=self.verifyTimeOutRequest, args=()).start()
 
             self.queue.append(operation)
 
@@ -157,7 +171,7 @@ class Manager(Protocol):
             result = self.igor_bank.sendPix(operation.transfer)
 
             self.queue[self.indicator].conn.sendall(pickle.dumps(
-                Outcome(result)
+                Outcome(Protocol.OPERATION_RESULT, result)
             ))
             
     def verifyProcessRunning(self) -> bool:

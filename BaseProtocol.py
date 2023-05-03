@@ -20,7 +20,7 @@ class Protocol:
     DEBT_VALUE_SEND_PIX = 'DEBT_VALUE_SEND_PIX'
     CREDIT_VALUE_RECEIVE_BY_PIX = 'CREDIT_VALUE_RECEIVE_BY_PIX'
 
-    SUCESS = 'SUCCESS'
+    SUCCESS = 'SUCCESS'
     FAILURE = 'FAILURE'
 
     def __init__(self) -> None:

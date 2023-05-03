@@ -37,16 +37,19 @@ class Process(Protocol):
                 )
 
             elif outcome.response == Protocol.OPERATION_RESULT:
-                if outcome.status == Protocol.SUCESS:
+                if outcome.status == Protocol.SUCCESS:
                     self.updateUI("OPERATION_RESULT_SUCESS")
 
                     self.current_number_operation += 1
                     self.requestOperation()
+                else:
+                    self.updateUI("OPERATION_RESULT_FAILURE")
 
     def operation(self, transfer):
         self.updateUI(Protocol.OPERATION_SEND_PIX)
         transfer.type = Protocol.OPERATION_SEND_PIX
-        self.mSocket.sendall(pickle.dumps(transfer))
+        print(transfer)
+        self.mSocket.sendall(pickle.dumps(Operation(Protocol.OPERATION_SEND_PIX, transfer)))
 
         sleep(self.time_sleep)
         
@@ -60,12 +63,13 @@ class Process(Protocol):
     def updateUI(self, protocol_type):
         self.bank_gui.updateGui(datetime.now(), self.tranfers[self.current_number_operation], protocol_type)
     
-user = User("a", "b", "gabras_8s4d")
+"""user = User("a", "b", "gabras_8s4d")"""
 
-Process(
+#
+"""Process(
     [
         Transfer(user, "igor_abc", 3),
         Transfer(user, "veto_2asd", 3)
     ],
-    2
-)
+    time_sleep=2
+)"""
