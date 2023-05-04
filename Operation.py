@@ -10,4 +10,4 @@ class Operation:
         self.status = Protocol.ON_HOLD
 
     def __str__(self) -> str:
-        return f"OPERATION - operation={self.operation}, transfer({self.transfer}), conn={self.conn}"
+        return f"OPERATION - operation={self.operation}, transfer=({self.transfer})"

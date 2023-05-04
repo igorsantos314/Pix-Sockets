@@ -60,28 +60,27 @@ def getRandomTransfers(repetitions) -> list:
         transfers[randint(0, len(transfers) - 1)] for i in range(repetitions)
     ]
 
-def build(repetitions):
+def build(sleep_time, repetitions):
     Process(
         getRandomTransfers(repetitions),
-        time_sleep=2
+        sleep_time
     )
 
 # Executar testes
 for test in test_list:
-    process = []
 
     for n in test["n"]:
+        process = []
+
         for k in range(0, n):
             process.append(
-                Thread(target=build, args=([test["r"]]))
+                Thread(target=build, args=([test["k"], test["r"]]))
             )
 
-    print(f"\n\nTEST[{test}] -> Press [Enter] to run Test")
-    input()
+        print(f"\n\nTEST[{test}] -> Press [Enter] to run Test")
+        print(f"Process list size: {len(process)}")
 
-    for p in process:
-        p.start()
+        for p in process:
+            p.start()
 
-    sleep(20)
-    print("Sleep test finished ...")
     

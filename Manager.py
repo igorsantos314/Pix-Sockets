@@ -44,6 +44,7 @@ class AccountRepositoryMock:
 
     def isPixPossible(self, user: User, receptor_key, transfer_value):
         if self.userAuthenticated(user) == False:
+            print("Auth Failure")
             return None, None
 
         transmitter_account = self.findAccount(user.pix_key)
@@ -105,21 +106,6 @@ class Manager(Protocol):
         self.running = True
         self.last_time_stamp = datetime.now().timestamp()
 
-    def verifyTimeOutRequest(self):
-        self.time_out_started = True
-
-        while True:
-            pass
-            """if datetime.now().timestamp() > (self.last_time_stamp + 5) and self.running:
-                self.running = False
-                self.queue[self.indicator].status = Protocol.RELEASED
-                self.indicator += 1
-                
-                if self.indicator < len(self.queue):
-                    self.grantProcessAccess()
-                
-                print("Request timeout ... ")"""
-
     def restart(self):
         self.queue.clear()
 
@@ -148,18 +134,15 @@ class Manager(Protocol):
                 pass
         
     def manageQueue(self, operation: Operation):
-        if operation.operation == Protocol.REQUEST:
-            if self.time_out_started == False:
-                self.updateTimeStamp()
-                #Thread(target=self.verifyTimeOutRequest, args=()).start()
+        logging.debug(f"{operation}")
 
+        if operation.operation == Protocol.REQUEST:
             self.queue.append(operation)
 
             if self.verifyProcessRunning() == False:
                 self.grantProcessAccess()
 
         elif operation.operation == Protocol.RELEASE:
-            self.updateTimeStamp()
             self.queue[self.indicator].status = Protocol.RELEASED
             self.indicator += 1
             
@@ -167,8 +150,9 @@ class Manager(Protocol):
                 self.grantProcessAccess()
 
         elif operation.operation == Protocol.OPERATION_SEND_PIX:
-            self.updateTimeStamp()
             result = self.igor_bank.sendPix(operation.transfer)
+
+            print(result)
 
             self.queue[self.indicator].conn.sendall(pickle.dumps(
                 Outcome(Protocol.OPERATION_RESULT, result)

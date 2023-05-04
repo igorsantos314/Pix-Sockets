@@ -12,7 +12,7 @@ class GuiIgorBank:
         self.table.align["VALUE"] = "l"
         self.table.align["OPERATION"] = "l"
 
-    def updateGui(self, time_stamp, transfer: Transfer, type):
+    def updateGui(self, time_stamp, transfer: Transfer, type, show = False):
         #print("\x1b[2J")
 
         self.table.add_row(
@@ -24,5 +24,7 @@ class GuiIgorBank:
                 type
             ]
         )
-        print(self.table)
-        print("\n")
+
+        if show:
+            print(self.table)
+            print("\n")

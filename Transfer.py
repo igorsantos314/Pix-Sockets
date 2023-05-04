@@ -11,4 +11,4 @@ class Transfer:
         self.status = Protocol.EMPTY
 
     def __str__(self) -> str:
-        return f"TRANSFER - type{self.type}, user_credentials{self.user_credentials}, receptor{self.receptor}, value{self.value}, status{self.status}"
+        return f"TRANSFER - type={self.type}, user_credentials=({self.user_credentials}), receptor={self.receptor}, value={self.value}, status={self.status}"
